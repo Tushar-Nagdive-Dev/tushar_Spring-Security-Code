@@ -1,0 +1,10 @@
+# Ignore generated files
+
+*.zip
+.metadata/
+.sonarlint/
+
+# folder
+firstApp
+couponService/mvnw
+
