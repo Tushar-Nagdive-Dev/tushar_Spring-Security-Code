@@ -17,6 +17,10 @@ import org.springframework.security.web.context.DelegatingSecurityContextReposit
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 @Configuration
 public class CustomWebSecurityConfig {
@@ -47,29 +51,36 @@ public class CustomWebSecurityConfig {
 		return new DelegatingSecurityContextRepository(new RequestAttributeSecurityContextRepository(), new HttpSessionSecurityContextRepository());
 	}
 	
-//	@Bean
-//	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//		http.httpBasic(Customizer.withDefaults());
-//		
-//		http.authorizeHttpRequests(authorize -> authorize.requestMatchers(HttpMethod.GET, "/CouponApi/coupons/**", "/").hasAnyRole("USER", "ADMIN")
-//				.requestMatchers(HttpMethod.POST, "/CouponApi/coupons", "/saveCoupon").hasRole("ADMIN")
-//				.requestMatchers(HttpMethod.GET, "/showCreateCoupon", "/createCoupon", "createResponse").hasAnyRole("ADMIN"));
-//		
-//		http.csrf(csrf -> csrf.disable());
-//		
-//		return http.build();
-//	}
+	/**
+	@Bean
+	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http.httpBasic(Customizer.withDefaults());
+		
+		http.authorizeHttpRequests(authorize -> authorize.requestMatchers(HttpMethod.GET, "/CouponApi/coupons/**", "/").hasAnyRole("USER", "ADMIN")
+				.requestMatchers(HttpMethod.POST, "/CouponApi/coupons", "/saveCoupon").hasRole("ADMIN")
+				.requestMatchers(HttpMethod.GET, "/showCreateCoupon", "/createCoupon", "createResponse").hasAnyRole("ADMIN"));
+		
+		http.csrf(csrf -> csrf.disable());
+		
+		return http.build();
+	}
+	*/
 	
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
-//		http.formLogin(Customizer.withDefaults());
 		http.authorizeHttpRequests().requestMatchers(HttpMethod.GET, "/CouponApi/coupons/{code:^[A-Z]*$}", "/login","/showGetCoupon", "/getCoupon").hasAnyRole(USER, ADMIN)
 		.requestMatchers(HttpMethod.GET, "/showCreateCoupon", "/createCoupon", "/createResponse").hasAnyRole(ADMIN)
 		.requestMatchers(HttpMethod.POST, "/CouponApi/coupons", "/saveCoupon").hasRole(ADMIN)
 		.requestMatchers(HttpMethod.POST, "/getCoupon").hasAnyRole(USER, ADMIN)
-		.requestMatchers("/","/login", "/showReg", "/registerUser").permitAll()
-		.and().logout().logoutSuccessUrl("/")
-		.and().csrf().disable();
+		.requestMatchers("/","/login", "/showReg", "/registerUser").permitAll().anyRequest().denyAll()
+		.and().logout().logoutSuccessUrl("/");
+		
+		http.csrf(csrfCustomizer -> {
+			  csrfCustomizer.ignoringRequestMatchers("/CouponApi/coupons/**");
+			  RequestMatcher regexMatcher = new RegexRequestMatcher("/CouponApi/coupons/[A-Z]+", "POST");
+			  RequestMatcher mvcMatcher = new MvcRequestMatcher(new HandlerMappingIntrospector(), "/getCoupon");
+			  csrfCustomizer.ignoringRequestMatchers(regexMatcher, mvcMatcher);
+			});
 		
 		http.securityContext(securityContext -> securityContext.requireExplicitSave(true));
 		return http.build();
